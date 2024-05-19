@@ -2,7 +2,6 @@ import { memo, useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import { debounce } from "lodash";
-
 import ReactFlow, {
   ReactFlowProvider,
   Node,
@@ -24,9 +23,10 @@ import customNode1 from "./nodes/customNode1";
 import customNode2 from "./nodes/customNode2";
 
 import { localFetch, localSync } from "../lib/localStorage";
-import { syncNodeAction } from "../redux/actions/nodeActions";
 import { RootState } from "../redux/store";
-import { setActiveNodeAction } from "../redux/actions/activeNodeActions";
+import { useNavigate } from "react-router-dom";
+import { syncNodes } from "@/redux/slices/nodeSlice";
+import { setActiveNode } from "@/redux/slices/activeNodeSlice";
 
 const fitViewOptions: FitViewOptions = {
   padding: 0.2,
@@ -41,22 +41,14 @@ const nodeTypes: NodeTypes = {
   example2: customNode2,
 };
 
-interface FlowProps {
-  setPanelType: (type: string) => void;
-}
-
-const Flow: React.FC<FlowProps> = ({ setPanelType }) => {
+const Flow = () => {
   const state_nodes = useSelector((state: RootState) => state.nodes);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
-
-  const handleNodeChanges = () => {
-    localSync("nodes", nodes);
-    syncNodeAction(dispatch, nodes);
-  };
 
   const onConnect = useCallback(
     (params: Edge | Connection) => {
@@ -102,13 +94,43 @@ const Flow: React.FC<FlowProps> = ({ setPanelType }) => {
     event.dataTransfer.dropEffect = "move";
   };
 
-  useEffect(() => {
-    if (nodes.length === 0) {
-      const _nodes = localFetch("nodes");
-      setNodes(_nodes);
-      syncNodeAction(dispatch, _nodes);
+  const debouncedSync = useCallback(
+    debounce((nodes, changes) => {
+      localSync("nodes", nodes);
+      dispatch(syncNodes(nodes));
+      const activeNode = nodes.find((node: Node) => {
+        return node.id === changes[0].id;
+      });
+      dispatch(setActiveNode(activeNode));
+    }, 1000),
+    []
+  );
+
+  const handleNodeChanges = useCallback(
+    (changes: any) => {
+      debouncedSync(nodes, changes);
+    },
+    [debouncedSync, nodes]
+  );
+
+  const fetchLocalNodesAndSync = debounce(
+    () => {
+      if (nodes.length === 0) {
+        const _nodes = localFetch("nodes");
+        setNodes(_nodes);
+        dispatch(syncNodes(_nodes));
+      }
+    },
+    1000,
+    {
+      leading: false,
+      trailing: true,
     }
-  }, [dispatch, nodes, setNodes]);
+  );
+
+  useEffect(() => {
+    fetchLocalNodesAndSync();
+  }, []);
 
   useEffect(() => {
     if (nodes !== state_nodes) setNodes(state_nodes);
@@ -141,7 +163,7 @@ const Flow: React.FC<FlowProps> = ({ setPanelType }) => {
           edges={edges}
           onNodesChange={(changes) => {
             onNodesChange(changes);
-            handleNodeChanges();
+            handleNodeChanges(changes);
           }}
           onEdgesChange={onEdgesChange}
           defaultEdgeOptions={defaultEdgeOptions}
@@ -152,8 +174,8 @@ const Flow: React.FC<FlowProps> = ({ setPanelType }) => {
           nodeTypes={nodeTypes}
           fitViewOptions={fitViewOptions}
           onNodeClick={(_, node) => {
-            setPanelType("settings");
-            setActiveNodeAction(dispatch, node);
+            navigate("settings", { replace: true });
+            dispatch(setActiveNode(node));
           }}
           fitView
         >

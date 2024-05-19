@@ -3,16 +3,17 @@ import { useState } from "react";
 import { Columns2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-import Panel from "../components/panel";
-import Flow from "../components/flow";
+import Panel from "@/components/panel";
+import Flow from "@/components/flow";
+import Nav from "@/components/nav";
 
 const Root = () => {
   const [panelState, setPanelState] = useState<boolean>(true);
-  const [panelType, setPanelType] = useState<string>("node");
 
   return (
     <div className="relative">
-      <Flow setPanelType={setPanelType} />
+      <Flow />
+      <Nav />
 
       <div className="absolute top-2 right-2">
         <Button
@@ -25,8 +26,6 @@ const Root = () => {
       </div>
 
       <Panel
-        type={panelType}
-        setType={() => setPanelType("node")}
         panelState={panelState}
         setPanelState={() => setPanelState(!panelState)}
       />

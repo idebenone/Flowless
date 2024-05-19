@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,37 +20,53 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "./ui/button";
+import { SquareMousePointer } from "lucide-react";
 
-import { editNodeAction } from "../redux/actions/nodeActions";
+import { setActiveNode } from "@/redux/slices/activeNodeSlice";
+import { editNode } from "@/redux/slices/nodeSlice";
 import { RootState } from "../redux/store";
-import { setActiveNodeAction } from "../redux/actions/activeNodeActions";
-import { useEffect } from "react";
 
 const formSchema = z.object({
   label: z.string(),
   content: z.string(),
   type: z.string(),
+  position: z.object({
+    x: z.any(),
+    y: z.any(),
+  }),
 });
 
 const SettingsPanel = () => {
   const activeNode = useSelector((state: RootState) => state.activeNode);
   const dispatch = useDispatch();
 
+  const defaultValues = {
+    label: activeNode?.data?.label ?? "",
+    content: activeNode?.data?.content ?? "",
+    type: activeNode?.type ?? "",
+    position: {
+      x: activeNode?.position?.x ?? 0,
+      y: activeNode?.position?.y ?? 0,
+    },
+  };
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      label: activeNode.data.label,
-      content: activeNode.data.content,
-      type: activeNode.type,
-    },
+    defaultValues,
   });
 
   useEffect(() => {
-    form.reset({
-      label: activeNode.data.label,
-      content: activeNode.data.content,
-      type: activeNode.type,
-    });
+    if (activeNode) {
+      form.reset({
+        label: activeNode?.data?.label ?? "",
+        content: activeNode?.data?.content ?? "",
+        type: activeNode?.type ?? "",
+        position: {
+          x: activeNode?.position?.x ?? 0,
+          y: activeNode?.position?.y ?? 0,
+        },
+      });
+    }
   }, [activeNode, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -61,17 +78,24 @@ const SettingsPanel = () => {
         label: values.label,
         content: values.content,
       },
+      position: {
+        x: values.position.x,
+        y: values.position.y,
+      },
     };
-    editNodeAction(dispatch, _activeNode);
-    setActiveNodeAction(dispatch, _activeNode);
+    dispatch(editNode(_activeNode));
+    dispatch(setActiveNode(_activeNode));
   }
 
-  return (
+  return activeNode.id ? (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="flex flex-col gap-3 p-4"
+        className="flex flex-col gap-3"
       >
+        <p className="text-center uppercase font-bold text-xs text-muted-foreground">
+          data
+        </p>
         <FormField
           control={form.control}
           name="label"
@@ -104,7 +128,11 @@ const SettingsPanel = () => {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Type</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select
+                key={field.value}
+                onValueChange={field.onChange}
+                defaultValue={activeNode.type}
+              >
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Type" />
@@ -118,9 +146,45 @@ const SettingsPanel = () => {
             </FormItem>
           )}
         />
+
+        <p className="text-center uppercase font-bold text-xs mt-4 text-muted-foreground">
+          position
+        </p>
+
+        <FormField
+          control={form.control}
+          name="position.x"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>X</FormLabel>
+              <FormControl>
+                <Input placeholder="Position X" type="number" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="position.y"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Y</FormLabel>
+              <FormControl>
+                <Input placeholder="Position Y" type="number" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
         <Button type="submit">Submit</Button>
       </form>
     </Form>
+  ) : (
+    <div className="h-full w-full flex flex-col gap-4 justify-center items-center">
+      <SquareMousePointer className="h-16 w-16 " />
+      <p className="font-semibold">Please select a node</p>
+    </div>
   );
 };
 

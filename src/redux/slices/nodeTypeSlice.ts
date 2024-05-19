@@ -8,7 +8,7 @@ export const nodeTypeSlice = createSlice({
     initialState,
     reducers: {
         syncNodeTypes: (_state, action: PayloadAction<Node[]>) => {
-            _state.push(...action.payload);
+            return action.payload
         },
         createNodeType: (_state, action: PayloadAction<Node>) => {
             _state.push(action.payload);

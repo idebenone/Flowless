@@ -1,33 +1,36 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Node } from "reactflow";
+import { v4 as uuidv4 } from "uuid";
+import { debounce } from "lodash";
 
 import { PlusCircle } from "lucide-react";
+import { Button } from "./ui/button";
 
 import { RootState } from "../redux/store";
+import { localFetch, localSync } from "../lib/localStorage";
 import {
-  addNodeTypeAction,
-  editNodeTypeAction,
-  syncNodeTypesActions,
-} from "../redux/actions/nodeTypeActions";
-import { localSync } from "../lib/localStorage";
-import { Button } from "./ui/button";
+  createNodeType,
+  editNodeType,
+  syncNodeTypes,
+} from "@/redux/slices/nodeTypeSlice";
 
 const NodePanel = () => {
   const nodeTypes = useSelector((state: RootState) => state.nodeType);
   const dispatch = useDispatch();
   const inputRef = useRef<HTMLInputElement>(null);
-
   const [editNodeState, setEditNodeState] = useState<boolean>(false);
   const [editNode, setEditNode] = useState<Node | undefined>();
 
   const handleEditNodeType = () => {
     if (editNode)
       if (inputRef.current?.value)
-        editNodeTypeAction(dispatch, {
-          ...editNode,
-          data: { ...editNode.data, label: inputRef.current?.value },
-        });
+        dispatch(
+          editNodeType({
+            ...editNode,
+            data: { ...editNode.data, label: inputRef.current?.value },
+          })
+        );
   };
 
   const handleDragEvent = (
@@ -38,25 +41,45 @@ const NodePanel = () => {
     event.dataTransfer.effectAllowed = "move";
   };
 
-  /*
-    When the page loads / reloads, our state is initialized empty.
-    If it's empty, we try to sync from localStorage.
-    If not, we will overwrite the localStorage
-  */
-  useEffect(() => {
-    if (nodeTypes.length !== 0) {
-      setTimeout(() => {
-        localSync("nodeTypes", nodeTypes);
-      }, 1000);
-    } else {
-      syncNodeTypesActions(dispatch);
+  const fetchLocalTypesAndSyncState = debounce(
+    () => {
+      const nodeTypes = localFetch("nodeTypes");
+      dispatch(syncNodeTypes(nodeTypes));
+    },
+    1000,
+    {
+      leading: false,
+      trailing: true,
     }
-  }, [nodeTypes, dispatch]);
+  );
+
+  const fetchStateTypesAndSyncLocal = debounce(
+    () => {
+      if (nodeTypes.length !== 0) {
+        setTimeout(() => {
+          localSync("nodeTypes", nodeTypes);
+        }, 1000);
+      }
+    },
+    1000,
+    {
+      leading: false,
+      trailing: true,
+    }
+  );
+
+  useEffect(() => {
+    fetchLocalTypesAndSyncState();
+  }, []);
+
+  useEffect(() => {
+    fetchStateTypesAndSyncLocal();
+  }, [nodeTypes]);
 
   return (
     <>
       {nodeTypes.length !== 0 && (
-        <div className="flex flex-wrap gap-2 m-4">
+        <div className="flex flex-wrap gap-2">
           {nodeTypes.map((nodeType, index) => (
             <div
               key={index}
@@ -104,7 +127,20 @@ const NodePanel = () => {
       <div className="flex justify-center my-4">
         <Button
           className="flex items-center gap-2"
-          onClick={() => addNodeTypeAction(dispatch, "example1")}
+          onClick={() =>
+            dispatch(
+              createNodeType({
+                id: uuidv4().substring(0, 7),
+                type: "example1",
+                data: {
+                  id: "",
+                  label: "untitled",
+                  content: "Content goes here",
+                },
+                position: { x: 0, y: 0 },
+              })
+            )
+          }
         >
           <p>Create</p>
           <PlusCircle className="h-4 w-4" />

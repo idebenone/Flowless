@@ -1,41 +1,38 @@
-import { ArrowLeft, X } from "lucide-react";
-
-import NodePanel from "./nodePanel";
-import SettingsPanel from "./settingsPanel";
+import { X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 
 interface PanelProps {
-  type: string;
-  setType: () => void;
   panelState: boolean;
   setPanelState: () => void;
 }
 
-const Panel: React.FC<PanelProps> = ({
-  type,
-  setType,
-  panelState,
-  setPanelState,
-}) => {
+const Panel: React.FC<PanelProps> = ({ panelState, setPanelState }) => {
+  const location = useLocation();
+  const [pathName, setPathName] = useState<string>("");
+
+  useEffect(() => {
+    setPathName(location.pathname.split("/")[1]);
+  }, [location]);
+
   return (
-    panelState && (
-      <div className="absolute right-0 top-0 backdrop-blur-sm w-[400px] border h-full overflow-y-scroll">
-        <div
-          id="header"
-          className="flex justify-between items-center p-4 border-b bg-white"
-        >
-          <span className="flex items-center gap-4">
-            {type !== "node" && (
-              <ArrowLeft className="w-4 h-4 cursor-pointer" onClick={setType} />
-            )}
-            <p className="font-bold">
-              {type == "node" ? "Node Panel" : "Settings"}
-            </p>
-          </span>
-          <X className="w-4 h-4 cursor-pointer" onClick={setPanelState} />
-        </div>
-        {type == "node" ? <NodePanel /> : <SettingsPanel />}
+    <div
+      className={`absolute right-0 top-0 backdrop-blur-sm border h-full overflow-y-scroll transition-all duration-200 ${
+        panelState ? "w-[400px] animate-fade-in" : "w-0 animate-fade-out"
+      }`}
+    >
+      <div
+        id="header"
+        className="sticky top-0 flex justify-between items-center p-4 border-b bg-white"
+      >
+        <p className="font-bold uppercase">{pathName}</p>
+        <X className="w-4 h-4 cursor-pointer" onClick={setPanelState} />
       </div>
-    )
+
+      <div className="m-4">
+        <Outlet />
+      </div>
+    </div>
   );
 };
 
