@@ -11,11 +11,11 @@ import ReactFlow, {
   Controls,
   useNodesState,
   useEdgesState,
-  Connection,
   Edge,
   Background,
   BackgroundVariant,
   NodeTypes,
+  Connection,
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -27,6 +27,7 @@ import { RootState } from "../redux/store";
 import { useNavigate } from "react-router-dom";
 import { syncNodes } from "@/redux/slices/nodeSlice";
 import { setActiveNode } from "@/redux/slices/activeNodeSlice";
+import { createEdge, syncEdges } from "@/redux/slices/edgesSlice";
 
 const fitViewOptions: FitViewOptions = {
   padding: 0.2,
@@ -43,6 +44,7 @@ const nodeTypes: NodeTypes = {
 
 const Flow = () => {
   const state_nodes = useSelector((state: RootState) => state.nodes);
+  const state_edges = useSelector((state: RootState) => state.edges);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -58,6 +60,7 @@ const Flow = () => {
 
       if (!isSourceConnected) {
         setEdges((eds) => addEdge(params, eds));
+        dispatch(createEdge(params as Edge));
       } else {
         alert("A node can have only one source");
       }
@@ -94,7 +97,7 @@ const Flow = () => {
     event.dataTransfer.dropEffect = "move";
   };
 
-  const debouncedSync = useCallback(
+  const debouncedNodeSync = useCallback(
     debounce((nodes, changes) => {
       localSync("nodes", nodes);
       dispatch(syncNodes(nodes));
@@ -108,17 +111,39 @@ const Flow = () => {
 
   const handleNodeChanges = useCallback(
     (changes: any) => {
-      debouncedSync(nodes, changes);
+      debouncedNodeSync(nodes, changes);
     },
-    [debouncedSync, nodes]
+    [debouncedNodeSync, nodes]
   );
 
-  const fetchLocalNodesAndSync = debounce(
+  const debouncedEdgeSync = useCallback(
+    debounce((edges) => {
+      localSync("edges", edges);
+      dispatch(syncEdges(edges));
+    }, 1000),
+    []
+  );
+
+  const handleEdgeChanges = useCallback(() => {
+    debouncedEdgeSync(edges);
+  }, [debouncedEdgeSync, edges]);
+
+  const fetchLocalNodesEdgesAndSync = debounce(
     () => {
       if (nodes.length === 0) {
         const _nodes = localFetch("nodes");
-        setNodes(_nodes);
-        dispatch(syncNodes(_nodes));
+        if (_nodes.length !== 0) {
+          setNodes(_nodes);
+          dispatch(syncNodes(_nodes));
+        }
+      }
+
+      if (edges.length === 0) {
+        const _edges = localFetch("edges");
+        if (_edges.length !== 0) {
+          setEdges(_edges);
+          dispatch(syncEdges(_edges));
+        }
       }
     },
     1000,
@@ -129,31 +154,17 @@ const Flow = () => {
   );
 
   useEffect(() => {
-    fetchLocalNodesAndSync();
+    fetchLocalNodesEdgesAndSync();
   }, []);
 
   useEffect(() => {
     if (nodes !== state_nodes) setNodes(state_nodes);
-  }, [state_nodes]);
+    if (edges !== state_edges) setEdges(state_edges);
 
-  useEffect(() => {
-    const handleLocalEdgeSync = debounce(
-      () => {
-        if (edges.length === 0) {
-          setEdges(localFetch("edges"));
-        } else {
-          localSync("edges", edges);
-        }
-      },
-      1000,
-      {
-        leading: false,
-        trailing: true,
-      }
-    );
-
-    handleLocalEdgeSync();
-  }, [edges, setEdges]);
+    if (state_edges.length !== 0) {
+      localSync("edges", state_edges);
+    }
+  }, [state_nodes, state_edges]);
 
   return (
     <div className="w-screen h-screen">

@@ -6,3 +6,7 @@ export function localFetch(type: string): any[] {
     const data = localStorage.getItem(type);
     return data ? JSON.parse(data) : [];
 }
+
+export function localFlush() {
+    localStorage.clear();
+}
