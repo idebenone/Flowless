@@ -22,12 +22,12 @@ import "reactflow/dist/style.css";
 import customNode1 from "./nodes/customNode1";
 import customNode2 from "./nodes/customNode2";
 
-import { localFetch, localSync } from "../lib/localStorage";
+import { localSync } from "../lib/localStorage";
 import { RootState } from "../redux/store";
 import { useNavigate } from "react-router-dom";
 import { syncNodes } from "@/redux/slices/nodeSlice";
 import { setActiveNode } from "@/redux/slices/activeNodeSlice";
-import { createEdge, syncEdges } from "@/redux/slices/edgesSlice";
+import { createEdge } from "@/redux/slices/edgesSlice";
 
 const fitViewOptions: FitViewOptions = {
   padding: 0.2,
@@ -38,8 +38,8 @@ const defaultEdgeOptions: DefaultEdgeOptions = {
 };
 
 const nodeTypes: NodeTypes = {
-  example1: customNode1,
-  example2: customNode2,
+  custom_node_1: customNode1,
+  custom_node_2: customNode2,
 };
 
 const Flow = () => {
@@ -116,46 +116,17 @@ const Flow = () => {
     [debouncedNodeSync, nodes]
   );
 
-  const debouncedEdgeSync = useCallback(
-    debounce((edges) => {
-      localSync("edges", edges);
-      dispatch(syncEdges(edges));
-    }, 1000),
-    []
-  );
+  // const debouncedEdgeSync = useCallback(
+  //   debounce((edges) => {
+  //     localSync("edges", edges);
+  //     dispatch(syncEdges(edges));
+  //   }, 1000),
+  //   []
+  // );
 
-  const handleEdgeChanges = useCallback(() => {
-    debouncedEdgeSync(edges);
-  }, [debouncedEdgeSync, edges]);
-
-  const fetchLocalNodesEdgesAndSync = debounce(
-    () => {
-      if (nodes.length === 0) {
-        const _nodes = localFetch("nodes");
-        if (_nodes.length !== 0) {
-          setNodes(_nodes);
-          dispatch(syncNodes(_nodes));
-        }
-      }
-
-      if (edges.length === 0) {
-        const _edges = localFetch("edges");
-        if (_edges.length !== 0) {
-          setEdges(_edges);
-          dispatch(syncEdges(_edges));
-        }
-      }
-    },
-    1000,
-    {
-      leading: false,
-      trailing: true,
-    }
-  );
-
-  useEffect(() => {
-    fetchLocalNodesEdgesAndSync();
-  }, []);
+  // const handleEdgeChanges = useCallback(() => {
+  //   debouncedEdgeSync(edges);
+  // }, [debouncedEdgeSync, edges]);
 
   useEffect(() => {
     if (nodes !== state_nodes) setNodes(state_nodes);
@@ -163,6 +134,10 @@ const Flow = () => {
 
     if (state_edges.length !== 0) {
       localSync("edges", state_edges);
+    }
+
+    if (state_nodes.length !== 0) {
+      localSync("nodes", state_nodes);
     }
   }, [state_nodes, state_edges]);
 

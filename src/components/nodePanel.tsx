@@ -4,15 +4,15 @@ import { Node } from "reactflow";
 import { v4 as uuidv4 } from "uuid";
 import { debounce } from "lodash";
 
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Workflow, X } from "lucide-react";
 import { Button } from "./ui/button";
 
 import { RootState } from "../redux/store";
-import { localFetch, localSync } from "../lib/localStorage";
+import { localSync } from "../lib/localStorage";
 import {
   createNodeType,
+  deleteNodeType,
   editNodeType,
-  syncNodeTypes,
 } from "@/redux/slices/nodeTypeSlice";
 
 const NodePanel = () => {
@@ -41,18 +41,6 @@ const NodePanel = () => {
     event.dataTransfer.effectAllowed = "move";
   };
 
-  const fetchLocalTypesAndSyncState = debounce(
-    () => {
-      const nodeTypes = localFetch("nodeTypes");
-      dispatch(syncNodeTypes(nodeTypes));
-    },
-    1000,
-    {
-      leading: false,
-      trailing: true,
-    }
-  );
-
   const fetchStateTypesAndSyncLocal = debounce(
     () => {
       if (nodeTypes.length !== 0) {
@@ -69,21 +57,17 @@ const NodePanel = () => {
   );
 
   useEffect(() => {
-    fetchLocalTypesAndSyncState();
-  }, []);
-
-  useEffect(() => {
     fetchStateTypesAndSyncLocal();
   }, [nodeTypes]);
 
   return (
     <>
-      {nodeTypes.length !== 0 && (
+      {nodeTypes.length !== 0 ? (
         <div className="flex flex-wrap gap-2">
           {nodeTypes.map((nodeType, index) => (
             <div
               key={index}
-              className="p-4 border rounded-lg"
+              className="p-4 border rounded-lg cursor-grab relative group"
               draggable
               onDragStart={(e) => handleDragEvent(e, nodeType)}
             >
@@ -119,8 +103,20 @@ const NodePanel = () => {
                   </>
                 )}
               </div>
+
+              <span
+                className="p-0.5 absolute -top-1 -right-1 cursor-pointer opacity-0 transition-opacity duration-300 group-hover:opacity-100 rounded-full bg-black"
+                onClick={() => dispatch(deleteNodeType(nodeType.id))}
+              >
+                <X className="h-3 w-3 text-white" />
+              </span>
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 justify-center items-center">
+          <Workflow className="h-16 w-16" />
+          <p className="font-semibold">No nodes found</p>
         </div>
       )}
 
@@ -131,11 +127,11 @@ const NodePanel = () => {
             dispatch(
               createNodeType({
                 id: uuidv4().substring(0, 7),
-                type: "example1",
+                type: "custom_node_1",
                 data: {
                   id: "",
                   label: "untitled",
-                  content: "Content goes here",
+                  content: "Content",
                 },
                 position: { x: 0, y: 0 },
               })

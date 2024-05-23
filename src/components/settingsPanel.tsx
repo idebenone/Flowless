@@ -20,10 +20,10 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "./ui/button";
-import { SquareMousePointer } from "lucide-react";
+import { SquareMousePointer, Trash } from "lucide-react";
 
 import { setActiveNode } from "@/redux/slices/activeNodeSlice";
-import { editNode } from "@/redux/slices/nodeSlice";
+import { deleteNode, editNode } from "@/redux/slices/nodeSlice";
 import { RootState } from "../redux/store";
 
 const formSchema = z.object({
@@ -93,6 +93,14 @@ const SettingsPanel = () => {
         onSubmit={form.handleSubmit(onSubmit)}
         className="flex flex-col gap-3"
       >
+        <Button
+          className="flex gap-3 items-center"
+          variant="destructive"
+          onClick={() => dispatch(deleteNode(activeNode.id))}
+        >
+          <p>Delete</p>
+          <Trash className="h-4 w-4" />
+        </Button>
         <p className="text-center uppercase font-bold text-xs text-muted-foreground">
           data
         </p>
@@ -139,8 +147,8 @@ const SettingsPanel = () => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="example1">example1</SelectItem>
-                  <SelectItem value="example2">example2</SelectItem>
+                  <SelectItem value="custom_node_1">Custom Node 1</SelectItem>
+                  <SelectItem value="custom_node_2">Custom Node 2</SelectItem>
                 </SelectContent>
               </Select>
             </FormItem>
